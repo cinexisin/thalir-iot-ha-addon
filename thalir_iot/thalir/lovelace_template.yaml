@@ -1,0 +1,67 @@
+# Thalir IoT — Pre-built Lovelace dashboard YAML
+# Auto-installed into HA's storage by the add-on on first boot.
+# Visible to dealer / HQ via locked-down HA admin login only.
+# End customer uses the branded Thalir IoT mobile app (app.thalir.farm) — never sees this.
+
+views:
+  - title: Thalir IoT Farm
+    path: thalir
+    icon: mdi:water-pump
+    badges: []
+    cards:
+
+      - type: markdown
+        content: |
+          ## 🌾 Thalir IoT — Farm Dashboard
+          Internal dealer/HQ view. Customers see the branded app at **app.thalir.farm**.
+
+      - type: glance
+        title: Devices
+        entities:
+          - entity: sensor.thalir_gateway_online
+            name: Gateway
+          - entity: switch.motor1
+            name: Motor 1
+          - entity: switch.motor2
+            name: Motor 2
+          - entity: sensor.thalir_tank_level
+            name: Tank Level
+
+      - type: history-graph
+        title: "Motor current draw (24h)"
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - sensor.motor1_current
+          - sensor.motor2_current
+
+      - type: gauge
+        name: Tank Level
+        entity: sensor.thalir_tank_level
+        unit: "%"
+        min: 0
+        max: 100
+        severity:
+          green: 60
+          yellow: 30
+          red: 0
+
+      - type: entities
+        title: Active scenes
+        show_header_toggle: false
+        entities:
+          - scene.water_north_field
+          - scene.water_house_tank
+          - scene.evening_irrigation
+
+      - type: entity-filter
+        title: Active alerts
+        state_filter:
+          - "on"
+        entities:
+          - binary_sensor.motor1_dry_run
+          - binary_sensor.motor1_overload
+          - binary_sensor.motor1_phase_loss
+          - binary_sensor.motor2_dry_run
+          - binary_sensor.motor2_overload
+          - binary_sensor.motor2_phase_loss

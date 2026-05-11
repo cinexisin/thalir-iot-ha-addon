@@ -1,0 +1,70 @@
+# Thalir IoT Home Assistant Add-on manifest
+# Reference: https://developers.home-assistant.io/docs/add-ons/configuration/
+
+name: "Thalir IoT"
+version: "1.0.0"
+slug: thalir_iot
+description: "Smart farm automation — motor starters, valve control, water level. Branded customer experience, locked-down admin."
+url: "https://app.thalir.farm"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+
+# Add-on starts automatically on HA boot
+startup: services
+boot: auto
+
+# Required HA Supervisor APIs
+hassio_api: true
+hassio_role: admin
+auth_api: true
+homeassistant_api: true
+
+# Network access
+ports:
+  1883/tcp: 1883     # MQTT broker (local-only by default)
+  5353/udp: null     # mDNS — bind to host
+host_network: true   # mDNS multicast needs host networking
+
+# Container image
+image: "ghcr.io/cinexis-hq/thalir-iot-addon-{arch}"
+
+# Mappable folders
+map:
+  - config:rw        # for writing lovelace dashboard
+  - share:rw         # for storing farm_id and pair tokens
+
+# User-configurable options (shown in HA add-on UI)
+options:
+  customer_name: ""
+  customer_phone: ""
+  customer_language: "en"     # en | ta | hi | kn | te
+  gateway_mode: "auto"        # auto | serial | wifi
+  cloud_sync_enabled: true
+  cloud_endpoint: "https://iot-api.thalir.farm"
+  mqtt_broker_port: 1883
+  mqtt_username: "thalir_local"
+  mqtt_password: ""           # auto-generated if empty
+  log_level: "info"
+
+# Validation schema
+schema:
+  customer_name: str
+  customer_phone: str
+  customer_language: list(en|ta|hi|kn|te)
+  gateway_mode: list(auto|serial|wifi)
+  cloud_sync_enabled: bool
+  cloud_endpoint: str
+  mqtt_broker_port: port
+  mqtt_username: str
+  mqtt_password: password
+  log_level: list(debug|info|warning|error)?
+
+# Branding
+panel_icon: "mdi:water-pump"
+panel_title: "Thalir IoT"
+panel_admin: true
+
+# Custom UI sidebar entry
+ingress: false   # we don't expose web UI — customer uses Thalir IoT mobile app
