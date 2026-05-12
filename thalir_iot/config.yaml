@@ -2,7 +2,7 @@
 # Reference: https://developers.home-assistant.io/docs/add-ons/configuration/
 
 name: "Thalir IoT"
-version: "1.0.1"
+version: "1.1.0"
 slug: thalir_iot
 description: "Smart farm automation — motor starters, valve control, water level. Branded customer experience, locked-down admin."
 url: "https://app.thalir.farm"
@@ -41,28 +41,42 @@ map:
 
 # User-configurable options (shown in HA add-on UI)
 options:
+  # Identity (filled in by Installer App via QR scan, OR pasted manually)
+  farm_id: ""                 # e.g. TF-A1B2
+  agent_secret: ""            # one-time secret minted by cloud at pairing
+  ws_url: "wss://iot-api.thalir.farm/v1/agent"
+
+  # Customer metadata (purely informational — cloud is source of truth)
   customer_name: ""
   customer_phone: ""
   customer_language: "en"     # en | ta | hi | kn | te
+
+  # Local LoRa gateway link
   gateway_mode: "auto"        # auto | serial | wifi
-  cloud_sync_enabled: true
-  cloud_endpoint: "https://iot-api.thalir.farm"
   mqtt_broker_port: 1883
   mqtt_username: "thalir_local"
   mqtt_password: ""           # auto-generated if empty
+
+  # Cloud sync (legacy — kept for back-compat with the older haProxy path)
+  cloud_sync_enabled: true
+  cloud_endpoint: "https://iot-api.thalir.farm"
+
   log_level: "info"
 
 # Validation schema
 schema:
-  customer_name: str
-  customer_phone: str
-  customer_language: list(en|ta|hi|kn|te)
-  gateway_mode: list(auto|serial|wifi)
-  cloud_sync_enabled: bool
-  cloud_endpoint: str
-  mqtt_broker_port: port
-  mqtt_username: str
-  mqtt_password: password
+  farm_id: str?
+  agent_secret: password?
+  ws_url: str?
+  customer_name: str?
+  customer_phone: str?
+  customer_language: list(en|ta|hi|kn|te)?
+  gateway_mode: list(auto|serial|wifi)?
+  mqtt_broker_port: port?
+  mqtt_username: str?
+  mqtt_password: password?
+  cloud_sync_enabled: bool?
+  cloud_endpoint: str?
   log_level: list(debug|info|warning|error)?
 
 # Branding

@@ -21,6 +21,9 @@ read_opt() {
   python3 -c "import json,sys; d=json.load(open('$OPTS')); print(d.get('$1', '') if d.get('$1') is not None else '')"
 }
 
+FARM_ID="$(read_opt farm_id)"
+AGENT_SECRET="$(read_opt agent_secret)"
+WS_URL="$(read_opt ws_url)"
 CUSTOMER_NAME="$(read_opt customer_name)"
 CUSTOMER_PHONE="$(read_opt customer_phone)"
 CUSTOMER_LANG="$(read_opt customer_language)"
@@ -32,6 +35,9 @@ MQTT_USERNAME="$(read_opt mqtt_username)"
 MQTT_PASSWORD="$(read_opt mqtt_password)"
 LOG_LEVEL="$(read_opt log_level)"
 
+export THALIR_FARM_ID="$FARM_ID"
+export THALIR_AGENT_SECRET="$AGENT_SECRET"
+export THALIR_WS_URL="${WS_URL:-wss://iot-api.thalir.farm/v1/agent}"
 export THALIR_CUSTOMER_NAME="$CUSTOMER_NAME"
 export THALIR_CUSTOMER_PHONE="$CUSTOMER_PHONE"
 export THALIR_CUSTOMER_LANG="$CUSTOMER_LANG"
@@ -44,6 +50,8 @@ export THALIR_MQTT_PASSWORD="$MQTT_PASSWORD"
 export THALIR_LOG_LEVEL="$LOG_LEVEL"
 export HASSIO_TOKEN="${SUPERVISOR_TOKEN}"
 
+echo "Farm: ${FARM_ID:-<unpaired>}  agent_secret: $([ -n "$AGENT_SECRET" ] && echo set || echo unset)"
+echo "WS:   ${WS_URL}"
 echo "Customer: ${CUSTOMER_NAME:-<unset>} (${CUSTOMER_PHONE:-<unset>}) lang=${CUSTOMER_LANG}"
 echo "Gateway mode: ${GATEWAY_MODE}"
 echo "Cloud sync: ${CLOUD_SYNC} -> ${CLOUD_ENDPOINT}"

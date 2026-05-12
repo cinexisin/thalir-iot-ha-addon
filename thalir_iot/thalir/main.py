@@ -18,6 +18,7 @@ from . import lockdown
 from . import mdns_advertise
 from . import cloud_sync
 from . import gateway_bridge
+from . import agent as cloud_agent
 
 
 LOG_LEVEL = os.environ.get("THALIR_LOG_LEVEL", "info").upper()
@@ -83,9 +84,20 @@ def main():
     log.info(f"Thalir IoT Add-on v{__version__}")
     log.info("=" * 60)
 
-    # First-boot init
-    state = ensure_first_boot_done()
-    farm_id = state.get("farm_id")
+    # First-boot init — only runs the lockdown sequence the very first time.
+    # Skipped on subsequent boots and skipped entirely when the add-on is
+    # paired via the new cloud-relay flow (farm_id + agent_secret in options).
+    paired_via_cloud_relay = bool(
+        os.environ.get("THALIR_FARM_ID") and os.environ.get("THALIR_AGENT_SECRET")
+    )
+    farm_id = os.environ.get("THALIR_FARM_ID") or None
+
+    if not paired_via_cloud_relay:
+        state = ensure_first_boot_done()
+        farm_id = state.get("farm_id")
+    else:
+        log.info("Cloud-relay pairing detected — skipping legacy lockdown/cloud_sync")
+
     log.info(f"farm_id={farm_id}")
 
     # Start mDNS advertisement (so Heltec gateway can find broker)
@@ -97,20 +109,37 @@ def main():
         mode=os.environ.get("THALIR_GATEWAY_MODE", "auto"),
     )
 
-    # Heartbeat to cloud every 5 min
+    # Start the persistent cloud agent (outbound WebSocket)
+    agent_handle = cloud_agent.start(
+        farm_id=farm_id,
+        agent_secret=os.environ.get("THALIR_AGENT_SECRET", ""),
+        ws_url=os.environ.get("THALIR_WS_URL"),
+    )
+    if agent_handle:
+        log.info("Cloud agent thread started")
+    else:
+        log.warning("Cloud agent NOT started — pair via Installer App to enable remote control")
+
     def shutdown_handler(signum, frame):
         log.info("Shutting down…")
-        mdns.stop()
-        bridge.stop()
+        try: mdns.stop()
+        except Exception: pass
+        try: bridge.stop()
+        except Exception: pass
+        if agent_handle:
+            try: agent_handle.stop()
+            except Exception: pass
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, shutdown_handler)
     signal.signal(signal.SIGINT, shutdown_handler)
 
+    # Legacy 5-min cloud-sync heartbeat. The new cloud relay uses its own
+    # 25s WS ping, so this becomes a no-op once paired_via_cloud_relay.
     last_heartbeat = 0
     while True:
         now = time.time()
-        if now - last_heartbeat > 300:  # 5 min
+        if not paired_via_cloud_relay and now - last_heartbeat > 300:
             try:
                 cloud_sync.heartbeat(farm_id=farm_id)
             except Exception as e:

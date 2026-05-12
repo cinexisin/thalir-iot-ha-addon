@@ -6,7 +6,7 @@ FROM ${BUILD_FROM}
 # alpine/python combo and avoids hunting apk-packaged variants per arch).
 RUN apk add --no-cache avahi avahi-tools \
  && pip3 install --no-cache-dir --break-system-packages \
-      pyyaml requests paho-mqtt zeroconf
+      pyyaml requests paho-mqtt zeroconf websocket-client
 
 WORKDIR /opt/thalir
 
@@ -20,7 +20,7 @@ RUN chmod a+x /run.sh
 LABEL \
     io.hass.name="Thalir IoT" \
     io.hass.description="Smart farm automation - motor starters, valves, water level" \
-    io.hass.version="1.0.0" \
+    io.hass.version="1.1.0" \
     io.hass.type="addon" \
     io.hass.arch="aarch64|amd64|armv7"
 
