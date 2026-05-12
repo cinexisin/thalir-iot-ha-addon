@@ -304,6 +304,14 @@ class CloudAgent(threading.Thread):
             self._ws.send(json.dumps({"type": "pong", "ts": msg.get("ts")}))
         elif t == "request":
             self._dispatch_request(msg)
+        elif t == "set_local_token":
+            # Cloud is pushing the LAN-fallback bearer token. Forward to the
+            # local HTTP server so it can authenticate phone requests.
+            try:
+                from . import local_server
+                local_server.set_local_token(msg.get("token") or "")
+            except Exception as e:
+                log.warning(f"set_local_token forwarding failed: {e}")
         elif t == "close":
             log.info(f"server requested close: {msg.get('reason')}")
             self._ws.close()

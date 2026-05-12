@@ -19,6 +19,7 @@ from . import mdns_advertise
 from . import cloud_sync
 from . import gateway_bridge
 from . import agent as cloud_agent
+from . import local_server
 
 
 LOG_LEVEL = os.environ.get("THALIR_LOG_LEVEL", "info").upper()
@@ -100,14 +101,24 @@ def main():
 
     log.info(f"farm_id={farm_id}")
 
-    # Start mDNS advertisement (so Heltec gateway can find broker)
-    mdns = mdns_advertise.start(farm_id=farm_id)
+    # Start mDNS advertisement: BOTH the gateway-board MQTT broker AND
+    # the LAN-fallback HTTP service for the Farmer app.
+    mdns = mdns_advertise.start(
+        farm_id=farm_id or "UNPAIRED",
+        mqtt_port=1883,
+        http_port=8124,
+        addon_version=__version__,
+    )
 
     # Start gateway bridge (LoRa<->MQTT)
     bridge = gateway_bridge.start(
         farm_id=farm_id,
         mode=os.environ.get("THALIR_GATEWAY_MODE", "auto"),
     )
+
+    # Start LAN-fallback HTTP server. Listens on :8124 but rejects all
+    # requests until the cloud pushes a local_token via the agent socket.
+    lan_server = local_server.start(port=8124)
 
     # Start the persistent cloud agent (outbound WebSocket)
     agent_handle = cloud_agent.start(
@@ -125,6 +136,8 @@ def main():
         try: mdns.stop()
         except Exception: pass
         try: bridge.stop()
+        except Exception: pass
+        try: local_server.stop()
         except Exception: pass
         if agent_handle:
             try: agent_handle.stop()

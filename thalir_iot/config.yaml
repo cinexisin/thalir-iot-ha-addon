@@ -2,7 +2,7 @@
 # Reference: https://developers.home-assistant.io/docs/add-ons/configuration/
 
 name: "Thalir IoT"
-version: "1.1.1"
+version: "1.2.0"
 slug: thalir_iot
 description: "Smart farm automation — motor starters, valve control, water level. Branded customer experience, locked-down admin."
 url: "https://app.thalir.farm"
@@ -25,6 +25,7 @@ homeassistant_api: true
 ports:
   1883/tcp: 1883     # MQTT broker (local-only by default)
   5353/udp: null     # mDNS — bind to host
+  8124/tcp: 8124     # LAN fallback HTTP — phone hits this when WAN is down
 host_network: true   # mDNS multicast needs host networking
 
 # Container image — INTENTIONALLY OMITTED for v1.x development.
