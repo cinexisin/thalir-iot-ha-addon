@@ -27,8 +27,12 @@ ports:
   5353/udp: null     # mDNS — bind to host
 host_network: true   # mDNS multicast needs host networking
 
-# Container image
-image: "ghcr.io/cinexis-hq/thalir-iot-addon-{arch}"
+# Container image — INTENTIONALLY OMITTED for v1.x development.
+# With no `image:` set, HA Supervisor builds the Dockerfile locally on the user's
+# HA box the first time the add-on starts. That works on any arch (aarch64/amd64/armv7)
+# without us having to publish multi-arch images.
+# Switch to `image: "ghcr.io/<org>/thalir-iot-addon-{arch}"` once we publish to GHCR
+# (tracked as F100-class roadmap item, post v1.x).
 
 # Mappable folders
 map:
