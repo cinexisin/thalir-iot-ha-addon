@@ -24,4 +24,8 @@ LABEL \
     io.hass.type="addon" \
     io.hass.arch="aarch64|amd64|armv7"
 
-CMD [ "/run.sh" ]
+# Bypass the base image's s6-overlay /init entrypoint - we run our own script as
+# PID 1. (s6-overlay's suexec aborts when invoked as non-pid-1, which is what
+# the base image's /init was doing when CMD ran underneath it.)
+ENTRYPOINT [ "/run.sh" ]
+CMD []
