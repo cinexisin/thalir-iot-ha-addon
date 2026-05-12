@@ -270,6 +270,11 @@ class CloudAgent(threading.Thread):
     def _connect_and_serve(self):
         log.info(f"connecting to {self.ws_url} farm_id={self.farm_id}")
         self._ws = websocket.create_connection(self.ws_url, timeout=15)
+        # After handshake, disable read-timeout — recv() blocks indefinitely
+        # and we rely on the cloud's 25s server-ping for liveness. Without
+        # this, the socket's 15s default timeout fires inside recv() and the
+        # outer reconnect loop spins every 12-15s.
+        self._ws.settimeout(None)
         log.info("connection established — sending hello")
         self._ws.send(json.dumps({
             "type": "hello",
