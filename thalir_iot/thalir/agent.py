@@ -38,7 +38,11 @@ except ImportError as e:
 
 log = logging.getLogger("thalir.agent")
 
-ADDON_VERSION = os.environ.get("THALIR_ADDON_VERSION", "1.1.0")
+# Read from the package __version__ so it stays in sync with config.yaml
+try:
+    from . import __version__ as ADDON_VERSION
+except ImportError:
+    ADDON_VERSION = os.environ.get("THALIR_ADDON_VERSION", "unknown")
 
 
 # ============================================================ HA local proxy
