@@ -2,7 +2,7 @@
 # Reference: https://developers.home-assistant.io/docs/add-ons/configuration/
 
 name: "Thalir IoT"
-version: "1.0.0"
+version: "1.0.1"
 slug: thalir_iot
 description: "Smart farm automation — motor starters, valve control, water level. Branded customer experience, locked-down admin."
 url: "https://app.thalir.farm"
