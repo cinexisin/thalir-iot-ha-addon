@@ -98,30 +98,80 @@ def _ha_state(entity_id: str):
 # our contract and we don't want stale ops shipping unused.
 
 
+# Entity-name discovery: HA installs use varying prefixes
+#   (legacy: switch.motor1, MQTT discovery: switch.jawahar_farm_default_farm_motor1)
+# so we resolve a device_id to its actual entity by scanning HA states.
+
+_entity_cache = {"ts": 0, "switch": {}, "sensor_status": {}, "sensor_current": {}, "sensor_signal": {}}
+
+
+def _refresh_entity_cache(force=False):
+    if not force and time.time() - _entity_cache["ts"] < 60:
+        return
+    _, states = _ha_request("GET", "/states")
+    if not isinstance(states, list):
+        return
+    _entity_cache["switch"].clear()
+    _entity_cache["sensor_status"].clear()
+    _entity_cache["sensor_current"].clear()
+    _entity_cache["sensor_signal"].clear()
+    for s in states:
+        eid = s.get("entity_id", "")
+        # device suffix = last underscore-separated segment (e.g. "motor1")
+        if eid.startswith("switch."):
+            device = eid.split(".", 1)[1].rsplit("_", 1)[-1]
+            if device.startswith("motor"):
+                _entity_cache["switch"].setdefault(device, eid)
+        elif eid.startswith("sensor."):
+            # sensor.<...>_motorX_status / _current / _signal
+            tail = eid.split(".", 1)[1]
+            for suffix, key in (("_status", "sensor_status"), ("_current", "sensor_current"), ("_signal", "sensor_signal")):
+                if tail.endswith(suffix):
+                    base = tail[: -len(suffix)]
+                    device = base.rsplit("_", 1)[-1]
+                    if device.startswith("motor"):
+                        _entity_cache[key].setdefault(device, eid)
+                    break
+    _entity_cache["ts"] = time.time()
+
+
+def _resolve_switch(device):
+    _refresh_entity_cache()
+    return _entity_cache["switch"].get(device, f"switch.{device}")
+
+
+def _resolve_sensor(device, kind):
+    """kind ∈ {'status','current','signal'}"""
+    _refresh_entity_cache()
+    return _entity_cache[f"sensor_{kind}"].get(device, f"sensor.{device}_{kind}")
+
+
 def _op_motor_start(payload: dict):
     device = payload.get("device_id")
     if not device:
         return False, {"error": "device_id_required"}
-    status, _ = _ha_service("switch", "turn_on", {"entity_id": f"switch.{device}"})
-    return status in (200, 201), {"status": status}
+    entity = _resolve_switch(device)
+    status, _ = _ha_service("switch", "turn_on", {"entity_id": entity})
+    return status in (200, 201), {"status": status, "entity_id": entity}
 
 
 def _op_motor_stop(payload: dict):
     device = payload.get("device_id")
     if not device:
         return False, {"error": "device_id_required"}
-    status, _ = _ha_service("switch", "turn_off", {"entity_id": f"switch.{device}"})
-    return status in (200, 201), {"status": status}
+    entity = _resolve_switch(device)
+    status, _ = _ha_service("switch", "turn_off", {"entity_id": entity})
+    return status in (200, 201), {"status": status, "entity_id": entity}
 
 
 def _op_motor_state(payload: dict):
     device = payload.get("device_id")
     if not device:
         return False, {"error": "device_id_required"}
-    _, sw = _ha_state(f"switch.{device}")
-    _, st = _ha_state(f"sensor.{device}_status")
-    _, cu = _ha_state(f"sensor.{device}_current")
-    _, si = _ha_state(f"sensor.{device}_signal")
+    _, sw = _ha_state(_resolve_switch(device))
+    _, st = _ha_state(_resolve_sensor(device, "status"))
+    _, cu = _ha_state(_resolve_sensor(device, "current"))
+    _, si = _ha_state(_resolve_sensor(device, "signal"))
     return True, _build_motor_record(device, sw, st, cu, si)
 
 
@@ -129,10 +179,10 @@ def _op_motor_list_state(payload: dict):
     devices = payload.get("devices") or ["motor1", "motor2"]
     motors = []
     for d in devices:
-        _, sw = _ha_state(f"switch.{d}")
-        _, st = _ha_state(f"sensor.{d}_status")
-        _, cu = _ha_state(f"sensor.{d}_current")
-        _, si = _ha_state(f"sensor.{d}_signal")
+        _, sw = _ha_state(_resolve_switch(d))
+        _, st = _ha_state(_resolve_sensor(d, "status"))
+        _, cu = _ha_state(_resolve_sensor(d, "current"))
+        _, si = _ha_state(_resolve_sensor(d, "signal"))
         motors.append(_build_motor_record(d, sw, st, cu, si))
     return True, {"motors": motors}
 
