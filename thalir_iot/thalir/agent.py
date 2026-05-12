@@ -273,6 +273,8 @@ class CloudAgent(threading.Thread):
             "secret": self.agent_secret,
             "addon_version": ADDON_VERSION,
             "ha_version": _detect_ha_version(),
+            "lan_ips": _detect_lan_ips(),     # for phone-side LAN fallback discovery
+            "lan_http_port": 8124,
         }))
 
         # First frame must be hello_ok or we close.
@@ -366,6 +368,31 @@ def _detect_ha_version() -> str:
     except Exception:
         pass
     return "unknown"
+
+
+def _detect_lan_ips():
+    """Best-effort: list of LAN IPv4 addresses this gateway listens on.
+    Used by the phone to try the LAN fallback HTTP path before falling
+    through to the cloud relay."""
+    import socket
+    ips = set()
+    # 1. UDP-connect-to-anywhere trick to find the default-route IP
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ips.add(s.getsockname()[0])
+        s.close()
+    except Exception:
+        pass
+    # 2. Hostname resolution (catches secondary interfaces)
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if not ip.startswith("127."):
+                ips.add(ip)
+    except Exception:
+        pass
+    return sorted(ips)
 
 
 _singleton: CloudAgent = None
